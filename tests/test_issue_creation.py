@@ -3,9 +3,9 @@ import os
 import shutil
 import tempfile
 from fastapi.testclient import TestClient
-from backend.main import app
-from backend.models import Base
-from backend.database import engine
+from main import app
+from models import Base
+from database import engine
 
 # Setup test DB
 Base.metadata.create_all(bind=engine)
