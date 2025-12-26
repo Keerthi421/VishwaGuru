@@ -59,7 +59,7 @@ async def generate_action_plan(issue_description: str, category: str, image_path
             "email_body": f"Respected Authority,\n\nI am writing to bring to your attention a {category} issue: {issue_description}.\n\nPlease take necessary action.\n\nSincerely,\nCitizen"
         }
 
-async def chat_with_civic_assistant(query: str, history: Optional[list] = None) -> str:
+async def chat_with_civic_assistant(query: str) -> str:
     """
     Chat with the civic assistant.
     """
