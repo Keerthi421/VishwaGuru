@@ -3,6 +3,9 @@ import io
 import httpx
 from PIL import Image
 import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
 
 # HF_TOKEN is optional for public models but recommended for higher limits
 token = os.environ.get("HF_TOKEN")
@@ -35,11 +38,11 @@ async def query_hf_api(image_bytes, labels):
         try:
             response = await client.post(API_URL, headers=headers, json=payload, timeout=20.0)
             if response.status_code != 200:
-                print(f"HF API Error: {response.status_code} - {response.text}")
+                logger.error(f"HF API Error: {response.status_code} - {response.text}")
                 return []
             return response.json()
         except Exception as e:
-            print(f"HF API Request Exception: {e}")
+            logger.error(f"HF API Request Exception: {e}")
             return []
 
 async def detect_vandalism_clip(image: Image.Image):
@@ -71,7 +74,7 @@ async def detect_vandalism_clip(image: Image.Image):
                  })
         return detected
     except Exception as e:
-        print(f"HF Detection Error: {e}")
+        logger.error(f"HF Detection Error: {e}")
         return []
 
 async def detect_infrastructure_clip(image: Image.Image):
@@ -99,7 +102,7 @@ async def detect_infrastructure_clip(image: Image.Image):
                  })
         return detected
     except Exception as e:
-        print(f"HF Detection Error: {e}")
+        logger.error(f"HF Detection Error: {e}")
         return []
 
 async def detect_flooding_clip(image: Image.Image):
@@ -127,5 +130,5 @@ async def detect_flooding_clip(image: Image.Image):
                  })
         return detected
     except Exception as e:
-        print(f"HF Detection Error: {e}")
+        logger.error(f"HF Detection Error: {e}")
         return []
