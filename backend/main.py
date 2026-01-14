@@ -361,7 +361,6 @@ async def detect_infrastructure_endpoint(request: Request, image: UploadFile = F
 
     # Run detection using unified service (local ML by default)
     try:
-        detections = await detect_infrastructure(pil_image)
         # Use shared HTTP client from app state
         client = request.app.state.http_client
         detections = await detect_infrastructure_clip(image_bytes, client=client)
@@ -381,7 +380,6 @@ async def detect_flooding_endpoint(request: Request, image: UploadFile = File(..
 
     # Run detection using unified service (local ML by default)
     try:
-        detections = await detect_flooding(pil_image)
         # Use shared HTTP client from app state
         client = request.app.state.http_client
         detections = await detect_flooding_clip(image_bytes, client=client)
@@ -401,7 +399,6 @@ async def detect_vandalism_endpoint(request: Request, image: UploadFile = File(.
 
     # Run detection using unified service (local ML by default)
     try:
-        detections = await detect_vandalism(pil_image)
         # Use shared HTTP client from app state
         client = request.app.state.http_client
         detections = await detect_vandalism_clip(image_bytes, client=client)
