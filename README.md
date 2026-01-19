@@ -11,44 +11,23 @@ VishwaGuru is an open source platform empowering India's youth to engage with de
 
 ## Architecture & Data Flow
 
-VishwaGuru follows a modular and lightweight architecture designed for scalability and ease of contribution. The system connects a web frontend, a backend API, AI services, a database, and a Telegram bot through a unified backend.
+VishwaGuru uses a unified backend architecture where a single FastAPI service powers the web frontend, AI services, database operations, and the Telegram bot.
 
 ### High-Level Flow
 
-1. Users submit civic issues through the Web UI or Telegram bot.
-2. Requests are received by the FastAPI backend.
-3. The backend validates and processes the data.
-4. Civic issues are stored in the database.
-5. When required, the backend sends issue details to the Gemini AI service.
-6. AI-generated action plans (WhatsApp messages, emails, etc.) are returned to the user.
+1. Users submit civic issues via Web UI or Telegram.
+2. Requests reach the FastAPI backend.
+3. Data is validated and stored in the database.
+4. When needed, the backend sends data to Google Gemini.
+5. AI-generated action plans are returned to users.
 
-### Frontend → Backend Interaction
+### Components Interaction
 
-- The frontend is built using **React (Vite)**.
-- User actions (issue submission, requests for action plans) trigger REST API calls.
-- These requests are handled by the FastAPI backend.
-- Responses from the backend are rendered in the UI.
-
-### AI Request Flow (Gemini API)
-
-- The backend integrates with **Google Gemini** for AI-powered action plans.
-- Relevant civic issue details are sent to the Gemini API.
-- Gemini generates structured responses such as message drafts and action steps.
-- The backend returns these responses to the frontend or Telegram bot.
-
-### Database Usage
-
-- **SQLite** is used for local development and testing.
-- **PostgreSQL** is recommended for production deployments.
-- SQLAlchemy manages all database interactions.
-- Stored data includes civic issues, timestamps, and related metadata.
-
-### Telegram Bot Lifecycle
-
-- The Telegram bot runs as part of the FastAPI application.
-- It starts automatically when the backend server is launched.
-- Users can submit and track civic issues via Telegram.
-- Bot requests follow the same validation, AI, and database flow as the web application.
+- **Frontend (React + Vite)** communicates with backend via REST APIs.
+- **Backend (FastAPI)** handles logic, validation, and orchestration.
+- **Database** stores civic issues (SQLite locally, PostgreSQL in production).
+- **Gemini AI** generates action plans and message drafts.
+- **Telegram Bot** uses the same backend APIs as the web app.
 
 
 ## Prerequisites
@@ -219,6 +198,53 @@ DATABASE_URL=...
 *   **AI**: Google Gemini (google-generativeai)
 *   **Bot**: python-telegram-bot
 *   **Deployment**: Firebase (Hosting + Functions), Render/Netlify (Alternative)
+  
+
+## Development & Contribution Guide
+
+This section helps new contributors and developers understand how to work with the VishwaGuru codebase effectively.
+
+### Development Workflow
+
+1. Fork the repository
+2. Create a new branch from `main`
+3. Make focused changes related to a single issue
+4. Test changes locally
+5. Open a pull request with a clear description
+
+### API Usage Overview
+
+- The frontend communicates with the backend using REST APIs.
+- Issue submissions are sent from the frontend to the FastAPI backend.
+- The backend handles validation, database storage, and AI integration.
+- Responses are returned as JSON and rendered in the UI.
+- The same backend APIs are used by the Telegram bot.
+
+This unified API design ensures consistent behavior across all user interfaces.
+
+### Environment Configuration Tips
+
+- Use `.env` files for local development.
+- Never commit API keys or secrets.
+- Ensure `DATABASE_URL` is set correctly when switching between SQLite and PostgreSQL.
+
+### Common Development Commands
+
+
+
+**Backend**
+```bash
+PYTHONPATH=backend python -m uvicorn main:app --reload
+
+```
+
+**Frontend**
+```bash
+cd frontend
+npm install
+npm run dev
+
+```
 
 ## License
 
