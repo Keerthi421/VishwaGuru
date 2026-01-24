@@ -21,7 +21,7 @@ import time
 import magic
 import httpx
 
-from backend.cache import recent_issues_cache
+from backend.cache import recent_issues_cache, user_upload_cache
 from backend.database import engine, Base, SessionLocal, get_db
 from backend.models import Issue
 from backend.schemas import (
@@ -85,31 +85,27 @@ ALLOWED_MIME_TYPES = {
 # User upload limits
 UPLOAD_LIMIT_PER_USER = 5  # max uploads per user per hour
 UPLOAD_LIMIT_PER_IP = 10  # max uploads per IP per hour
-user_upload_cache = {}  # dict of user/ip -> list of timestamps
 
 def check_upload_limits(identifier: str, limit: int) -> None:
     """
-    Check if the user/IP has exceeded upload limits.
-    Cleans up old timestamps (older than 1 hour).
+    Check if the user/IP has exceeded upload limits using thread-safe cache.
     """
+    current_uploads = user_upload_cache.get(identifier) or []
     now = datetime.now()
     one_hour_ago = now - timedelta(hours=1)
     
-    if identifier not in user_upload_cache:
-        user_upload_cache[identifier] = []
+    # Filter out old timestamps (older than 1 hour)
+    recent_uploads = [ts for ts in current_uploads if ts > one_hour_ago]
     
-    # Clean up old timestamps
-    user_upload_cache[identifier] = [
-        ts for ts in user_upload_cache[identifier] if ts > one_hour_ago
-    ]
-    
-    if len(user_upload_cache[identifier]) >= limit:
+    if len(recent_uploads) >= limit:
         raise HTTPException(
             status_code=429,
             detail=f"Upload limit exceeded. Maximum {limit} uploads per hour allowed."
         )
     
-    user_upload_cache[identifier].append(now)
+    # Add current timestamp and update cache atomically
+    recent_uploads.append(now)
+    user_upload_cache.set(recent_uploads, identifier)
 
 def _validate_uploaded_file_sync(file: UploadFile) -> None:
     """
@@ -195,7 +191,7 @@ async def process_action_plan_background(issue_id: int, description: str, catego
             db.commit()
 
             # Invalidate cache to ensure users get the updated action plan
-            recent_issues_cache.invalidate()
+            recent_issues_cache.invalidate("recent_issues")
     except Exception as e:
         logger.error(f"Background action plan generation failed for issue {issue_id}: {e}", exc_info=True)
     finally:
@@ -448,12 +444,11 @@ async def create_issue(
     # Add background task for AI generation
     background_tasks.add_task(process_action_plan_background, new_issue.id, description, category, image_path)
 
-    # Optimistic Cache Update
+    # Optimistic Cache Update with thread-safe operations
     try:
-        current_cache = recent_issues_cache.get()
+        current_cache = recent_issues_cache.get("recent_issues")
         if current_cache:
-            # Create a dict representation of the new issue (similar to IssueResponse)
-            # We use the new_issue object which has been refreshed from DB
+            # Create a dict representation of the new issue
             new_issue_dict = IssueResponse(
                 id=new_issue.id,
                 category=new_issue.category,
@@ -468,14 +463,15 @@ async def create_issue(
                 action_plan=new_issue.action_plan
             ).model_dump(mode='json')
 
-            # Prepend new issue to the list
+            # Prepend new issue to the list (atomic operation)
             current_cache.insert(0, new_issue_dict)
 
-            # Keep only last 10 (or matching the limit in get_recent_issues)
+            # Keep only last 10 entries
             if len(current_cache) > 10:
                 current_cache.pop()
 
-            recent_issues_cache.set(current_cache)
+            # Atomic cache update
+            recent_issues_cache.set(current_cache, "recent_issues")
     except Exception as e:
         logger.error(f"Error updating cache optimistically: {e}")
         # Failure to update cache is not critical, don't fail the request
@@ -553,19 +549,12 @@ async def chat_endpoint(request: ChatRequest):
 
 @app.get("/api/issues/recent", response_model=List[IssueResponse])
 def get_recent_issues(db: Session = Depends(get_db)):
-    cached_data = recent_issues_cache.get()
+    cached_data = recent_issues_cache.get("recent_issues")
     if cached_data:
-        # Check if cached data is already serialized (list of dicts)
-        # We return JSONResponse directly to bypass FastAPI's Pydantic validation/serialization
-        # which is redundant for cached data that was already validated when stored.
         return JSONResponse(content=cached_data)
 
     # Fetch last 10 issues
     issues = db.query(Issue).order_by(Issue.created_at.desc()).limit(10).all()
-
-    # Process issues to handle action_plan deserialization if needed
-    # Since action_plan is Text in DB, we should keep it that way for IssueResponse or parse it.
-    # The frontend expects it. IssueResponse defines action_plan as Optional[Any].
 
     # Convert to Pydantic models for validation and serialization
     data = []
@@ -582,10 +571,10 @@ def get_recent_issues(db: Session = Depends(get_db)):
             latitude=i.latitude,
             longitude=i.longitude,
             action_plan=i.action_plan
-        ).model_dump(mode='json')) # Store as JSON-compatible dict in cache
+        ).model_dump(mode='json'))
 
-    recent_issues_cache.set(data)
-
+    # Thread-safe cache update
+    recent_issues_cache.set(data, "recent_issues")
     return data
 
 @app.post("/api/detect-pothole", response_model=DetectionResponse)
