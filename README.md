@@ -521,29 +521,7 @@ firebase deploy
 
 </div>
 
----
 
-## 🤝 Development & Contribution Guide
-
-<div align="center">
-
-### 🌟 Welcome Contributors!
-
-We ❤️ contributions! Here's how to get started:
-
-</div>
-
-### Development Workflow
-
-```mermaid
-graph LR
-    A[Fork Repository] --> B[Create Feature Branch]
-    B --> C[Make Changes]
-    C --> D[Test Locally]
-    D --> E[Create Pull Request]
-    E --> F[Code Review]
-    F --> G[Merge to Main]
-```
 
 ### 📋 Contribution Steps
 
@@ -585,17 +563,4 @@ Found a bug? Have a feature request?
 
 ---
 
-<div align="center">
 
-### 🌟 Made with ❤️ for India's Democracy
-
-**Connect with us:**
-[![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Ewocs/VishwaGuru)
-[![Twitter](https://img.shields.io/badge/Twitter-1DA1F2?style=for-the-badge&logo=twitter&logoColor=white)](https://twitter.com/vishwaguru)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://linkedin.com/company/vishwaguru)
-
----
-
-*⭐ Star this repository if you find it helpful!*
-
-</div>
