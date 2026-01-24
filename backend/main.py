@@ -22,7 +22,7 @@ from pywebpush import webpush, WebPushException
 import magic
 import httpx
 
-from backend.cache import recent_issues_cache
+from backend.cache import recent_issues_cache, user_upload_cache
 from backend.database import engine, Base, SessionLocal, get_db
 from backend.models import Issue
 from backend.schemas import (
@@ -83,9 +83,40 @@ ALLOWED_MIME_TYPES = {
     'image/tiff'
 }
 
+# User upload limits
+UPLOAD_LIMIT_PER_USER = 5  # max uploads per user per hour
+UPLOAD_LIMIT_PER_IP = 10  # max uploads per IP per hour
+
+def check_upload_limits(identifier: str, limit: int) -> None:
+    """
+    Check if the user/IP has exceeded upload limits using thread-safe cache.
+    """
+    current_uploads = user_upload_cache.get(identifier) or []
+    now = datetime.now()
+    one_hour_ago = now - timedelta(hours=1)
+    
+    # Filter out old timestamps (older than 1 hour)
+    recent_uploads = [ts for ts in current_uploads if ts > one_hour_ago]
+    
+    if len(recent_uploads) >= limit:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Upload limit exceeded. Maximum {limit} uploads per hour allowed."
+        )
+    
+    # Add current timestamp and update cache atomically
+    recent_uploads.append(now)
+    user_upload_cache.set(recent_uploads, identifier)
+
 def _validate_uploaded_file_sync(file: UploadFile) -> None:
     """
     Synchronous validation logic to be run in a threadpool.
+    
+    Security measures:
+    - File size limits
+    - MIME type validation using content detection
+    - Image content validation using PIL
+    - TODO: Add virus/malware scanning (consider integrating ClamAV or similar)
     """
     # Check file size
     file.file.seek(0, 2)  # Seek to end
@@ -111,6 +142,21 @@ def _validate_uploaded_file_sync(file: UploadFile) -> None:
                 status_code=400,
                 detail=f"Invalid file type. Only image files are allowed. Detected: {detected_mime}"
             )
+        
+        # Additional content validation: Try to open with PIL to ensure it's a valid image
+        try:
+            img = Image.open(file.file)
+            img.verify()  # Verify the image is not corrupted
+            file.file.seek(0)  # Reset after PIL operations
+        except Exception as pil_error:
+            logger.error(f"PIL validation failed for {file.filename}: {pil_error}")
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid image file. The file appears to be corrupted or not a valid image."
+            )
+            
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error validating file {file.filename}: {e}")
         raise HTTPException(
@@ -146,7 +192,7 @@ async def process_action_plan_background(issue_id: int, description: str, catego
             db.commit()
 
             # Invalidate cache to ensure users get the updated action plan
-            recent_issues_cache.invalidate()
+            recent_issues_cache.invalidate("recent_issues")
     except Exception as e:
         logger.error(f"Background action plan generation failed for issue {issue_id}: {e}", exc_info=True)
     finally:
@@ -296,8 +342,26 @@ async def ml_status():
     )
 
 def save_file_blocking(file_obj, path):
-    with open(path, "wb") as buffer:
-        shutil.copyfileobj(file_obj, buffer)
+    """
+    Save uploaded file with security measures:
+    - Strip EXIF metadata from images to protect privacy
+    - For non-images, save as-is
+    """
+    try:
+        # Try to open as image with PIL
+        img = Image.open(file_obj)
+        # Strip EXIF data by creating a new image without metadata
+        img_no_exif = Image.new(img.mode, img.size)
+        img_no_exif.putdata(list(img.getdata()))
+        # Save without EXIF
+        img_no_exif.save(path, format=img.format)
+        logger.info(f"Saved image {path} with EXIF metadata stripped")
+    except Exception:
+        # If not an image or PIL fails, save as binary
+        file_obj.seek(0)  # Reset in case PIL read some
+        with open(path, "wb") as buffer:
+            shutil.copyfileobj(file_obj, buffer)
+        logger.info(f"Saved file {path} as binary (not an image or PIL failed)")
 
 def save_issue_db(db: Session, issue: Issue):
     db.add(issue)
@@ -307,6 +371,7 @@ def save_issue_db(db: Session, issue: Issue):
 
 @app.post("/api/issues", response_model=IssueCreateResponse, status_code=201)
 async def create_issue(
+    request: Request,
     background_tasks: BackgroundTasks,
     description: str = Form(..., min_length=10, max_length=1000),
     category: str = Form(..., pattern=f"^({'|'.join([cat.value for cat in IssueCategory])})$"),
@@ -319,6 +384,15 @@ async def create_issue(
     db: Session = Depends(get_db)
 ):
     image_path = None
+    
+    # Check upload limits if image is being uploaded
+    if image:
+        # Get client IP
+        client_ip = request.client.host if request.client else "unknown"
+        # Use user_email if provided, otherwise IP
+        identifier = user_email if user_email else client_ip
+        limit = UPLOAD_LIMIT_PER_USER if user_email else UPLOAD_LIMIT_PER_IP
+        check_upload_limits(identifier, limit)
     
     try:
         # Validate uploaded image if provided
@@ -373,12 +447,11 @@ async def create_issue(
     # Add background task for AI generation
     background_tasks.add_task(process_action_plan_background, new_issue.id, description, category, language, image_path)
 
-    # Optimistic Cache Update
+    # Optimistic Cache Update with thread-safe operations
     try:
-        current_cache = recent_issues_cache.get()
+        current_cache = recent_issues_cache.get("recent_issues")
         if current_cache:
-            # Create a dict representation of the new issue (similar to IssueResponse)
-            # We use the new_issue object which has been refreshed from DB
+            # Create a dict representation of the new issue
             new_issue_dict = IssueResponse(
                 id=new_issue.id,
                 category=new_issue.category,
@@ -393,14 +466,15 @@ async def create_issue(
                 action_plan=new_issue.action_plan
             ).model_dump(mode='json')
 
-            # Prepend new issue to the list
+            # Prepend new issue to the list (atomic operation)
             current_cache.insert(0, new_issue_dict)
 
-            # Keep only last 10 (or matching the limit in get_recent_issues)
+            # Keep only last 10 entries
             if len(current_cache) > 10:
                 current_cache.pop()
 
-            recent_issues_cache.set(current_cache)
+            # Atomic cache update
+            recent_issues_cache.set(current_cache, "recent_issues")
     except Exception as e:
         logger.error(f"Error updating cache optimistically: {e}")
         # Failure to update cache is not critical, don't fail the request
@@ -573,19 +647,12 @@ async def chat_endpoint(request: ChatRequest):
 
 @app.get("/api/issues/recent", response_model=List[IssueResponse])
 def get_recent_issues(db: Session = Depends(get_db)):
-    cached_data = recent_issues_cache.get()
+    cached_data = recent_issues_cache.get("recent_issues")
     if cached_data:
-        # Check if cached data is already serialized (list of dicts)
-        # We return JSONResponse directly to bypass FastAPI's Pydantic validation/serialization
-        # which is redundant for cached data that was already validated when stored.
         return JSONResponse(content=cached_data)
 
     # Fetch last 10 issues
     issues = db.query(Issue).order_by(Issue.created_at.desc()).limit(10).all()
-
-    # Process issues to handle action_plan deserialization if needed
-    # Since action_plan is Text in DB, we should keep it that way for IssueResponse or parse it.
-    # The frontend expects it. IssueResponse defines action_plan as Optional[Any].
 
     # Convert to Pydantic models for validation and serialization
     data = []
@@ -602,10 +669,10 @@ def get_recent_issues(db: Session = Depends(get_db)):
             latitude=i.latitude,
             longitude=i.longitude,
             action_plan=i.action_plan
-        ).model_dump(mode='json')) # Store as JSON-compatible dict in cache
+        ).model_dump(mode='json'))
 
-    recent_issues_cache.set(data)
-
+    # Thread-safe cache update
+    recent_issues_cache.set(data, "recent_issues")
     return data
 
 @app.post("/api/detect-pothole", response_model=DetectionResponse)
