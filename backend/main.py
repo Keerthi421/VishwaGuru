@@ -33,7 +33,8 @@ from backend.schemas import (
     ErrorResponse, SuccessResponse, StatsResponse, IssueCategory, IssueStatus,
     IssueStatusUpdateRequest, IssueStatusUpdateResponse,
     PushSubscriptionRequest, PushSubscriptionResponse,
-    NearbyIssueResponse, DeduplicationCheckResponse, IssueCreateWithDeduplicationResponse
+    NearbyIssueResponse, DeduplicationCheckResponse, IssueCreateWithDeduplicationResponse,
+    LeaderboardResponse, LeaderboardEntry
 )
 from backend.exceptions import EXCEPTION_HANDLERS
 from backend.bot import run_bot, start_bot_thread, stop_bot_thread
@@ -55,7 +56,7 @@ from backend.local_ml_service import (
     get_detection_status
 )
 from backend.gemini_services import get_ai_services, initialize_ai_services
-from backend.spatial_utils import find_nearby_issues
+from backend.spatial_utils import find_nearby_issues, get_bounding_box
 from backend.hf_api_service import (
     detect_illegal_parking_clip,
     detect_street_light_clip,
@@ -68,7 +69,8 @@ from backend.hf_api_service import (
     detect_smart_scan_clip,
     generate_image_caption,
     analyze_urgency_text,
-    verify_resolution_vqa
+    verify_resolution_vqa,
+    detect_depth_map
 )
 
 # Configure structured logging
@@ -327,6 +329,7 @@ def root():
 def health():
     return HealthResponse(
         status="healthy",
+        timestamp=datetime.now(timezone.utc),
         version="1.0.0",
         services={
             "database": "connected",
@@ -456,11 +459,16 @@ async def create_issue(
     if latitude is not None and longitude is not None:
         try:
             # Find existing open issues within 50 meters
+            # Optimization: Use bounding box to filter candidates in SQL
+            min_lat, max_lat, min_lon, max_lon = get_bounding_box(latitude, longitude, 50.0)
+
             open_issues = await run_in_threadpool(
                 lambda: db.query(Issue).filter(
                     Issue.status == "open",
-                    Issue.latitude.isnot(None),
-                    Issue.longitude.isnot(None)
+                    Issue.latitude >= min_lat,
+                    Issue.latitude <= max_lat,
+                    Issue.longitude >= min_lon,
+                    Issue.longitude <= max_lon
                 ).all()
             )
 
@@ -634,10 +642,15 @@ def get_nearby_issues(
     """
     try:
         # Query open issues with coordinates
+        # Optimization: Use bounding box to filter candidates in SQL
+        min_lat, max_lat, min_lon, max_lon = get_bounding_box(latitude, longitude, radius)
+
         open_issues = db.query(Issue).filter(
             Issue.status == "open",
-            Issue.latitude.isnot(None),
-            Issue.longitude.isnot(None)
+            Issue.latitude >= min_lat,
+            Issue.latitude <= max_lat,
+            Issue.longitude >= min_lon,
+            Issue.longitude <= max_lon
         ).all()
 
         nearby_issues_with_distance = find_nearby_issues(
@@ -834,6 +847,40 @@ async def chat_endpoint(request: ChatRequest):
     except Exception as e:
         logger.error(f"Chat service error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Chat service temporarily unavailable")
+
+@app.get("/api/leaderboard", response_model=LeaderboardResponse)
+def get_leaderboard(db: Session = Depends(get_db)):
+    # Group by user_email, count issues, sum upvotes
+    results = db.query(
+        Issue.user_email,
+        func.count(Issue.id).label('count'),
+        func.sum(Issue.upvotes).label('total_upvotes')
+    ).filter(
+        Issue.user_email.isnot(None),
+        Issue.user_email != ""
+    ).group_by(Issue.user_email).order_by(func.count(Issue.id).desc()).limit(10).all()
+
+    leaderboard = []
+    for idx, (email, count, upvotes) in enumerate(results):
+        # Mask email
+        try:
+            if '@' in email:
+                name, domain = email.split('@')
+                masked_email = f"{name[0]}***@{domain}"
+            else:
+                masked_email = email[:3] + "***"
+        except:
+            masked_email = "User***"
+
+        leaderboard.append(LeaderboardEntry(
+            user_email=masked_email,
+            reports_count=count,
+            total_upvotes=upvotes or 0,
+            rank=idx + 1
+        ))
+
+    return LeaderboardResponse(leaderboard=leaderboard)
+
 
 @app.get("/api/issues/recent", response_model=List[IssueSummaryResponse])
 def get_recent_issues(db: Session = Depends(get_db)):
@@ -1221,6 +1268,27 @@ async def generate_description_endpoint(request: Request, image: UploadFile = Fi
         return {"description": description}
     except Exception as e:
         logger.error(f"Description generation error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@app.post("/api/analyze-depth")
+async def analyze_depth_endpoint(request: Request, image: UploadFile = File(...)):
+    try:
+        image_bytes = await image.read()
+    except Exception as e:
+        logger.error(f"Invalid image file: {e}", exc_info=True)
+        raise HTTPException(status_code=400, detail="Invalid image file")
+
+    try:
+        client = request.app.state.http_client
+        result = await detect_depth_map(image_bytes, client=client)
+        if "error" in result:
+             raise HTTPException(status_code=500, detail=result["error"])
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Depth analysis error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 

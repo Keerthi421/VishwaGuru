@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, ConfigDict, validator, field_validator
 from typing import List, Optional, Any, Dict, Union
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 class IssueCategory(str, Enum):
@@ -139,12 +139,12 @@ class ErrorResponse(BaseModel):
     error: str = Field(..., description="Error message")
     error_code: str = Field(..., description="Error code for client handling")
     details: Optional[Dict[str, Any]] = Field(None, description="Additional error details")
-    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Error timestamp")
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Error timestamp")
 
 class SuccessResponse(BaseModel):
     message: str = Field(..., description="Success message")
     data: Optional[Dict[str, Any]] = Field(None, description="Response data")
-    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Response timestamp")
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Response timestamp")
 
 
 class StatsResponse(BaseModel):
@@ -178,3 +178,13 @@ class IssueCreateWithDeduplicationResponse(BaseModel):
     action_plan: Optional[ActionPlan] = Field(None, description="Generated action plan")
     deduplication_info: DeduplicationCheckResponse = Field(..., description="Deduplication check results")
     linked_issue_id: Optional[int] = Field(None, description="ID of existing issue that was upvoted (if applicable)")
+
+
+class LeaderboardEntry(BaseModel):
+    user_email: str = Field(..., description="User email (masked)")
+    reports_count: int = Field(..., description="Number of issues reported")
+    total_upvotes: int = Field(..., description="Total upvotes received on reports")
+    rank: int = Field(..., description="Rank on the leaderboard")
+
+class LeaderboardResponse(BaseModel):
+    leaderboard: List[LeaderboardEntry] = Field(..., description="List of top reporters")
