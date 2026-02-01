@@ -61,30 +61,55 @@ const Landing = () => {
     };
 
     return (
-        <div className="min-h-screen relative overflow-hidden font-sans bg-white selection:bg-blue-200">
-            {/* Professional Thick Gradient Background - Stripe/Vercel Style */}
+        <div className="min-h-screen relative overflow-hidden font-sans bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 selection:bg-blue-200">
+            {/* Animated Gradient Background */}
 
-            {/* Top Left - Bold Blue Gradient */}
-            <div className="absolute top-[-20%] left-[-20%] w-[70%] h-[90%] rounded-full bg-gradient-to-br from-blue-500/80 via-blue-400/70 to-blue-300/60 blur-[100px] -z-10" />
+            {/* Top Left - Blue Gradient with Animation */}
+            <motion.div
+                animate={{
+                    scale: [1, 1.1, 1],
+                    opacity: [0.5, 0.6, 0.5]
+                }}
+                transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute top-[-20%] left-[-20%] w-[70%] h-[90%] rounded-full bg-gradient-to-br from-blue-500/50 via-blue-400/40 to-blue-300/30 blur-[100px] -z-10 will-change-transform"
+            />
 
-            {/* Top Right - Bold Purple/Pink Gradient */}
-            <div className="absolute top-[-15%] right-[-20%] w-[65%] h-[85%] rounded-full bg-gradient-to-bl from-purple-500/80 via-pink-500/70 to-rose-400/60 blur-[100px] -z-10" />
+            {/* Top Right - Purple/Pink Gradient with Animation */}
+            <motion.div
+                animate={{
+                    scale: [1, 1.15, 1],
+                    opacity: [0.5, 0.55, 0.5]
+                }}
+                transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                className="absolute top-[-15%] right-[-20%] w-[65%] h-[85%] rounded-full bg-gradient-to-bl from-purple-500/50 via-pink-500/40 to-rose-400/30 blur-[100px] -z-10 will-change-transform"
+            />
 
-            {/* Bottom Left - Bold Orange Gradient */}
-            <div className="absolute bottom-[-15%] left-[-15%] w-[60%] h-[70%] rounded-full bg-gradient-to-tr from-orange-500/75 via-amber-400/65 to-yellow-300/55 blur-[90px] -z-10" />
+            {/* Bottom Left - Orange Gradient with Animation */}
+            <motion.div
+                animate={{
+                    scale: [1, 1.12, 1],
+                    opacity: [0.45, 0.5, 0.45]
+                }}
+                transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+                className="absolute bottom-[-15%] left-[-15%] w-[60%] h-[70%] rounded-full bg-gradient-to-tr from-orange-500/45 via-amber-400/35 to-yellow-300/25 blur-[90px] -z-10 will-change-transform"
+            />
 
-            {/* Bottom Right - Bold Indigo/Violet Gradient */}
-            <div className="absolute bottom-[-20%] right-[-15%] w-[55%] h-[75%] rounded-full bg-gradient-to-tl from-indigo-500/75 via-violet-500/65 to-purple-400/55 blur-[95px] -z-10" />
+            {/* Bottom Right - Indigo/Violet Gradient with Animation */}
+            <motion.div
+                animate={{
+                    scale: [1, 1.08, 1],
+                    opacity: [0.45, 0.52, 0.45]
+                }}
+                transition={{ duration: 11, repeat: Infinity, ease: "easeInOut", delay: 3 }}
+                className="absolute bottom-[-20%] right-[-15%] w-[55%] h-[75%] rounded-full bg-gradient-to-tl from-indigo-500/45 via-violet-500/35 to-purple-400/25 blur-[95px] -z-10 will-change-transform"
+            />
 
 
 
 
-            {/* Header */}
-            <motion.header
-                initial={{ y: -20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.5 }}
-                className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-100"
+            {/* Header - Fixed and Stable */}
+            <header
+                className="bg-white/90 backdrop-blur-md sticky top-0 z-50 border-b border-gray-100 shadow-sm"
             >
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-20">
@@ -118,7 +143,7 @@ const Landing = () => {
 
                     </div>
                 </div>
-            </motion.header>
+            </header>
 
             {/* Main Content */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
@@ -132,20 +157,46 @@ const Landing = () => {
                         className="lg:col-span-5 space-y-8"
                     >
                         <div className="space-y-6">
-                            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 leading-[1.1] tracking-tight">
-                                Empowering Citizens <br />
-                                <span className="text-gray-400 font-bold">for Better Governance</span>
-                            </h1>
-                            <p className="text-lg text-gray-600 leading-relaxed max-w-lg">
+                            <motion.h1
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3, delay: 0.1 }}
+                                className="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 leading-[1.1] tracking-tight"
+                            >
+                                <motion.span
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ duration: 0.3, delay: 0.2 }}
+                                    className="inline-block"
+                                >
+                                    Empowering Citizens
+                                </motion.span>
+                                <br />
+                                <motion.span
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ duration: 0.3, delay: 0.3 }}
+                                    className="text-gray-400 font-bold inline-block"
+                                >
+                                    for Better Governance
+                                </motion.span>
+                            </motion.h1>
+                            <motion.p
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3, delay: 0.4 }}
+                                className="text-lg text-gray-600 leading-relaxed max-w-lg"
+                            >
                                 Report civic issues and get AI-generated solutions. Connect with officials via Telegram to actively participate in governance.
-                            </p>
+                            </motion.p>
                         </div>
 
                         <motion.button
-                            whileHover={{ scale: 1.02, translateY: -2 }}
-                            whileTap={{ scale: 0.98 }}
+                            whileHover={{ scale: 1.05, translateY: -3 }}
+                            whileTap={{ scale: 0.95 }}
+                            transition={{ duration: 0.15 }}
                             onClick={() => navigate('/home')}
-                            className="bg-[#2D60FF] hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-bold text-lg shadow-[0_10px_20px_-5px_rgba(37,99,235,0.3)] transition-all duration-300 flex items-center gap-2 group"
+                            className="bg-[#2D60FF] hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-bold text-lg shadow-[0_10px_20px_-5px_rgba(37,99,235,0.3)] hover:shadow-[0_15px_30px_-5px_rgba(37,99,235,0.5)] transition-all duration-150 flex items-center gap-2 group"
                         >
                             Call Action Issue
                             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -165,8 +216,11 @@ const Landing = () => {
                         <div className="space-y-6">
                             {/* DepMyIndia Card */}
                             <motion.div
-                                whileHover={{ y: -5 }}
-                                className="bg-gradient-to-r from-[#2D60FF] to-[#1E40AF] rounded-3xl p-6 text-white shadow-xl relative overflow-hidden group"
+                                initial={{ opacity: 0, y: 30 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3, delay: 0.5 }}
+                                whileHover={{ y: -8, scale: 1.02 }}
+                                className="bg-gradient-to-r from-[#2D60FF] to-[#1E40AF] rounded-3xl p-6 text-white shadow-xl hover:shadow-2xl border-2 border-transparent hover:border-blue-300 relative overflow-hidden group transition-all duration-150"
                             >
                                 <div className="absolute top-0 right-0 p-4 opacity-20">
                                     <Search className="w-8 h-8" />
@@ -187,8 +241,9 @@ const Landing = () => {
 
                             {/* Government Services Card */}
                             <motion.div
-                                whileHover={{ y: -5 }}
-                                className="bg-white rounded-3xl p-6 shadow-[0_10px_30px_-5px_rgba(0,0,0,0.05)] border border-gray-100 group"
+                                whileHover={{ y: -8, scale: 1.02 }}
+                                transition={{ duration: 0.15 }}
+                                className="bg-white rounded-3xl p-6 shadow-[0_10px_30px_-5px_rgba(0,0,0,0.05)] hover:shadow-xl border-2 border-gray-100 hover:border-orange-400 group transition-all duration-150"
                             >
                                 <div className="flex justify-between items-center mb-6">
                                     <h3 className="font-bold text-gray-800">Government Services</h3>
@@ -236,8 +291,9 @@ const Landing = () => {
                     {/* Feature 1 */}
                     <motion.div
                         variants={itemVariants}
-                        whileHover={{ y: -5 }}
-                        className="bg-white p-8 rounded-3xl border border-gray-100 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.02)] text-center group"
+                        whileHover={{ y: -8, scale: 1.02 }}
+                        transition={{ duration: 0.15 }}
+                        className="bg-white p-8 rounded-3xl border-2 border-gray-100 hover:border-blue-400 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.02)] hover:shadow-xl text-center group transition-all duration-150"
                     >
                         <div className="w-16 h-16 mx-auto mb-6 relative">
                             <div className="absolute inset-0 bg-gray-100 rounded-2xl transform rotate-3 group-hover:rotate-12 transition-transform"></div>
@@ -252,8 +308,9 @@ const Landing = () => {
                     {/* Feature 2 (Green Accent) */}
                     <motion.div
                         variants={itemVariants}
-                        whileHover={{ y: -5 }}
-                        className="bg-white p-8 rounded-3xl border border-gray-100 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.02)] text-center group"
+                        whileHover={{ y: -8, scale: 1.02 }}
+                        transition={{ duration: 0.15 }}
+                        className="bg-white p-8 rounded-3xl border-2 border-gray-100 hover:border-green-400 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.02)] hover:shadow-xl text-center group transition-all duration-150"
                     >
                         <div className="w-16 h-16 mx-auto mb-6 bg-green-50 border border-green-100 rounded-2xl flex items-center justify-center">
                             <MessageCircle className="w-8 h-8 text-green-600" />
@@ -265,8 +322,9 @@ const Landing = () => {
                     {/* Feature 3 */}
                     <motion.div
                         variants={itemVariants}
-                        whileHover={{ y: -5 }}
-                        className="bg-white p-8 rounded-3xl border border-gray-100 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.02)] text-center"
+                        whileHover={{ y: -8, scale: 1.02 }}
+                        transition={{ duration: 0.15 }}
+                        className="bg-white p-8 rounded-3xl border-2 border-gray-100 hover:border-purple-400 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.02)] hover:shadow-xl text-center transition-all duration-150"
                     >
                         <div className="w-16 h-16 mx-auto mb-6 bg-blue-50 border border-blue-100 rounded-2xl flex items-center justify-center">
                             <Star className="w-8 h-8 text-blue-600" />
@@ -344,10 +402,9 @@ const Landing = () => {
             </div>
 
             {/* Simple Footer */}
-            <div className="text-center py-8 text-gray-400 text-sm border-t border-gray-100 mt-12">
-                © 2024 VishwaGuru. All rights reserved.
-            </div>
-        </div>
+            <div className="text-center py-8 bg-black text-white text-sm border-t border-gray-800 mt-12">
+                © {new Date().getFullYear()} VishwaGuru. All rights reserved.
+            </div>        </div>
     );
 };
 
