@@ -27,14 +27,9 @@ def test_cache_invalidation_behavior():
 
         # Perform issue creation
         # We need to send a multipart request
-        with patch('backend.main.run_in_threadpool') as mock_threadpool, \
-             patch('backend.main.get_ai_services') as mock_get_ai, \
-             patch('backend.main.validate_uploaded_file') as mock_validate: # Patch validation
-
-             # Mock AI services
-             mock_ai_services = MagicMock()
-             mock_ai_services.action_plan_service.generate_action_plan = AsyncMock(return_value={"whatsapp": "msg"})
-             mock_get_ai.return_value = mock_ai_services
+        # Patch run_in_threadpool in the router where create_issue lives
+        with patch('backend.routers.issues.run_in_threadpool') as mock_threadpool, \
+             patch('backend.routers.issues.validate_uploaded_file') as mock_validate: # Patch validation
 
              # Mock the DB save to return a dummy issue with an ID
              mock_saved_issue = MagicMock()
