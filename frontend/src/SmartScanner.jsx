@@ -11,21 +11,7 @@ const SmartScanner = ({ onBack }) => {
     const [error, setError] = useState(null);
     const navigate = useNavigate();
 
-    useEffect(() => {
-        let interval;
-        if (isDetecting) {
-            startCamera();
-            interval = setInterval(detectFrame, 2000);
-        } else {
-            stopCamera();
-            if (interval) clearInterval(interval);
-        }
-        return () => {
-            stopCamera();
-            if (interval) clearInterval(interval);
-        };
-    }, [isDetecting]);
-
+    // Define functions before useEffect to avoid hoisting issues
     const startCamera = async () => {
         setError(null);
         try {
@@ -90,6 +76,22 @@ const SmartScanner = ({ onBack }) => {
             }
         }, 'image/jpeg', 0.8);
     };
+
+    useEffect(() => {
+        let interval;
+        if (isDetecting) {
+            startCamera();
+            interval = setInterval(detectFrame, 2000);
+        } else {
+            stopCamera();
+            if (interval) clearInterval(interval);
+        }
+        return () => {
+            stopCamera();
+            if (interval) clearInterval(interval);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isDetecting]);
 
     const handleReport = () => {
         if (detection && detection.label && detection.label !== 'Safe' && detection.label !== 'unknown') {
