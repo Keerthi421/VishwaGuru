@@ -4,7 +4,7 @@ from PIL import Image
 from async_lru import alru_cache
 import logging
 
-from backend.utils import process_and_detect, validate_uploaded_file
+from backend.utils import process_and_detect, validate_uploaded_file, process_uploaded_image
 from backend.schemas import DetectionResponse, UrgencyAnalysisRequest, UrgencyAnalysisResponse
 from backend.pothole_detection import detect_potholes, validate_image_for_processing
 from backend.unified_detection_service import (
@@ -72,13 +72,11 @@ async def _cached_detect_graffiti(image_bytes: bytes):
 
 @router.post("/api/detect-pothole", response_model=DetectionResponse)
 async def detect_pothole_endpoint(image: UploadFile = File(...)):
-    # Validate uploaded file
-    await validate_uploaded_file(image)
+    # Optimized Image Processing: Validation + Optimization in one pass
+    pil_image, _ = await process_uploaded_image(image)
 
-    # Convert to PIL Image directly from file object to save memory
+    # Validate image for processing
     try:
-        pil_image = await run_in_threadpool(Image.open, image.file)
-        # Validate image for processing
         await run_in_threadpool(validate_image_for_processing, pil_image)
     except HTTPException:
         raise  # Re-raise HTTP exceptions from validation
@@ -112,11 +110,8 @@ async def detect_garbage_endpoint(image: UploadFile = File(...)):
 
 @router.post("/api/detect-illegal-parking")
 async def detect_illegal_parking_endpoint(request: Request, image: UploadFile = File(...)):
-    try:
-        image_bytes = await image.read()
-    except Exception as e:
-        logger.error(f"Invalid image file: {e}", exc_info=True)
-        raise HTTPException(status_code=400, detail="Invalid image file")
+    # Optimized Image Processing: Validation + Optimization
+    _, image_bytes = await process_uploaded_image(image)
 
     try:
         client = get_http_client(request)
@@ -128,11 +123,8 @@ async def detect_illegal_parking_endpoint(request: Request, image: UploadFile = 
 
 @router.post("/api/detect-street-light")
 async def detect_street_light_endpoint(request: Request, image: UploadFile = File(...)):
-    try:
-        image_bytes = await image.read()
-    except Exception as e:
-        logger.error(f"Invalid image file: {e}", exc_info=True)
-        raise HTTPException(status_code=400, detail="Invalid image file")
+    # Optimized Image Processing: Validation + Optimization
+    _, image_bytes = await process_uploaded_image(image)
 
     try:
         client = get_http_client(request)
@@ -144,11 +136,8 @@ async def detect_street_light_endpoint(request: Request, image: UploadFile = Fil
 
 @router.post("/api/detect-fire")
 async def detect_fire_endpoint(request: Request, image: UploadFile = File(...)):
-    try:
-        image_bytes = await image.read()
-    except Exception as e:
-        logger.error(f"Invalid image file: {e}", exc_info=True)
-        raise HTTPException(status_code=400, detail="Invalid image file")
+    # Optimized Image Processing: Validation + Optimization
+    _, image_bytes = await process_uploaded_image(image)
 
     try:
         client = get_http_client(request)
@@ -160,11 +149,8 @@ async def detect_fire_endpoint(request: Request, image: UploadFile = File(...)):
 
 @router.post("/api/detect-stray-animal")
 async def detect_stray_animal_endpoint(request: Request, image: UploadFile = File(...)):
-    try:
-        image_bytes = await image.read()
-    except Exception as e:
-        logger.error(f"Invalid image file: {e}", exc_info=True)
-        raise HTTPException(status_code=400, detail="Invalid image file")
+    # Optimized Image Processing: Validation + Optimization
+    _, image_bytes = await process_uploaded_image(image)
 
     try:
         client = get_http_client(request)
@@ -176,11 +162,8 @@ async def detect_stray_animal_endpoint(request: Request, image: UploadFile = Fil
 
 @router.post("/api/detect-blocked-road")
 async def detect_blocked_road_endpoint(request: Request, image: UploadFile = File(...)):
-    try:
-        image_bytes = await image.read()
-    except Exception as e:
-        logger.error(f"Invalid image file: {e}", exc_info=True)
-        raise HTTPException(status_code=400, detail="Invalid image file")
+    # Optimized Image Processing: Validation + Optimization
+    _, image_bytes = await process_uploaded_image(image)
 
     try:
         client = get_http_client(request)
@@ -193,11 +176,8 @@ async def detect_blocked_road_endpoint(request: Request, image: UploadFile = Fil
 
 @router.post("/api/detect-tree-hazard")
 async def detect_tree_hazard_endpoint(request: Request, image: UploadFile = File(...)):
-    try:
-        image_bytes = await image.read()
-    except Exception as e:
-        logger.error(f"Invalid image file: {e}", exc_info=True)
-        raise HTTPException(status_code=400, detail="Invalid image file")
+    # Optimized Image Processing: Validation + Optimization
+    _, image_bytes = await process_uploaded_image(image)
 
     try:
         client = get_http_client(request)
@@ -210,11 +190,8 @@ async def detect_tree_hazard_endpoint(request: Request, image: UploadFile = File
 
 @router.post("/api/detect-pest")
 async def detect_pest_endpoint(request: Request, image: UploadFile = File(...)):
-    try:
-        image_bytes = await image.read()
-    except Exception as e:
-        logger.error(f"Invalid image file: {e}", exc_info=True)
-        raise HTTPException(status_code=400, detail="Invalid image file")
+    # Optimized Image Processing: Validation + Optimization
+    _, image_bytes = await process_uploaded_image(image)
 
     try:
         client = get_http_client(request)
@@ -227,14 +204,8 @@ async def detect_pest_endpoint(request: Request, image: UploadFile = File(...)):
 
 @router.post("/api/detect-water-leak")
 async def detect_water_leak_endpoint(request: Request, image: UploadFile = File(...)):
-    # Validate uploaded file
-    await validate_uploaded_file(image)
-
-    try:
-        image_bytes = await image.read()
-    except Exception as e:
-        logger.error(f"Invalid image file: {e}", exc_info=True)
-        raise HTTPException(status_code=400, detail="Invalid image file")
+    # Optimized Image Processing: Validation + Optimization
+    _, image_bytes = await process_uploaded_image(image)
 
     try:
         client = get_http_client(request)
@@ -247,14 +218,8 @@ async def detect_water_leak_endpoint(request: Request, image: UploadFile = File(
 
 @router.post("/api/detect-accessibility")
 async def detect_accessibility_endpoint(request: Request, image: UploadFile = File(...)):
-    # Validate uploaded file
-    await validate_uploaded_file(image)
-
-    try:
-        image_bytes = await image.read()
-    except Exception as e:
-        logger.error(f"Invalid image file: {e}", exc_info=True)
-        raise HTTPException(status_code=400, detail="Invalid image file")
+    # Optimized Image Processing: Validation + Optimization
+    _, image_bytes = await process_uploaded_image(image)
 
     try:
         client = get_http_client(request)
@@ -267,14 +232,8 @@ async def detect_accessibility_endpoint(request: Request, image: UploadFile = Fi
 
 @router.post("/api/detect-crowd")
 async def detect_crowd_endpoint(request: Request, image: UploadFile = File(...)):
-    # Validate uploaded file
-    await validate_uploaded_file(image)
-
-    try:
-        image_bytes = await image.read()
-    except Exception as e:
-        logger.error(f"Invalid image file: {e}", exc_info=True)
-        raise HTTPException(status_code=400, detail="Invalid image file")
+    # Optimized Image Processing: Validation + Optimization
+    _, image_bytes = await process_uploaded_image(image)
 
     try:
         client = get_http_client(request)
@@ -319,12 +278,8 @@ async def detect_audio_endpoint(request: Request, file: UploadFile = File(...)):
 
 @router.post("/api/detect-severity")
 async def detect_severity_endpoint(image: UploadFile = File(...)):
-    try:
-        image_bytes = await image.read()
-    except Exception as e:
-        logger.error(f"Invalid image file: {e}", exc_info=True)
-        raise HTTPException(status_code=400, detail="Invalid image file")
-
+    # Optimized Image Processing: Validation + Optimization
+    _, image_bytes = await process_uploaded_image(image)
     try:
         return await _cached_detect_severity(image_bytes)
     except Exception as e:
@@ -334,12 +289,8 @@ async def detect_severity_endpoint(image: UploadFile = File(...)):
 
 @router.post("/api/detect-smart-scan")
 async def detect_smart_scan_endpoint(image: UploadFile = File(...)):
-    try:
-        image_bytes = await image.read()
-    except Exception as e:
-        logger.error(f"Invalid image file: {e}", exc_info=True)
-        raise HTTPException(status_code=400, detail="Invalid image file")
-
+    # Optimized Image Processing: Validation + Optimization
+    _, image_bytes = await process_uploaded_image(image)
     try:
         return await _cached_detect_smart_scan(image_bytes)
     except Exception as e:
@@ -349,12 +300,8 @@ async def detect_smart_scan_endpoint(image: UploadFile = File(...)):
 
 @router.post("/api/generate-description")
 async def generate_description_endpoint(image: UploadFile = File(...)):
-    try:
-        image_bytes = await image.read()
-    except Exception as e:
-        logger.error(f"Invalid image file: {e}", exc_info=True)
-        raise HTTPException(status_code=400, detail="Invalid image file")
-
+    # Optimized Image Processing: Validation + Optimization
+    _, image_bytes = await process_uploaded_image(image)
     try:
         description = await _cached_generate_caption(image_bytes)
         if not description:
@@ -367,11 +314,8 @@ async def generate_description_endpoint(image: UploadFile = File(...)):
 
 @router.post("/api/analyze-depth")
 async def analyze_depth_endpoint(request: Request, image: UploadFile = File(...)):
-    try:
-        image_bytes = await image.read()
-    except Exception as e:
-        logger.error(f"Invalid image file: {e}", exc_info=True)
-        raise HTTPException(status_code=400, detail="Invalid image file")
+    # Optimized Image Processing: Validation + Optimization
+    _, image_bytes = await process_uploaded_image(image)
 
     try:
         client = get_http_client(request)
@@ -422,14 +366,8 @@ async def transcribe_audio_endpoint(request: Request, file: UploadFile = File(..
 
 @router.post("/api/detect-waste")
 async def detect_waste_endpoint(image: UploadFile = File(...)):
-    # Validate uploaded file
-    await validate_uploaded_file(image)
-
-    try:
-        image_bytes = await image.read()
-    except Exception as e:
-        logger.error(f"Invalid image file: {e}", exc_info=True)
-        raise HTTPException(status_code=400, detail="Invalid image file")
+    # Optimized Image Processing: Validation + Optimization
+    _, image_bytes = await process_uploaded_image(image)
 
     try:
         return await _cached_detect_waste(image_bytes)
@@ -439,14 +377,8 @@ async def detect_waste_endpoint(image: UploadFile = File(...)):
 
 @router.post("/api/detect-civic-eye")
 async def detect_civic_eye_endpoint(image: UploadFile = File(...)):
-    # Validate uploaded file
-    await validate_uploaded_file(image)
-
-    try:
-        image_bytes = await image.read()
-    except Exception as e:
-        logger.error(f"Invalid image file: {e}", exc_info=True)
-        raise HTTPException(status_code=400, detail="Invalid image file")
+    # Optimized Image Processing: Validation + Optimization
+    _, image_bytes = await process_uploaded_image(image)
 
     try:
         return await _cached_detect_civic_eye(image_bytes)
@@ -456,14 +388,8 @@ async def detect_civic_eye_endpoint(image: UploadFile = File(...)):
 
 @router.post("/api/detect-graffiti")
 async def detect_graffiti_endpoint(image: UploadFile = File(...)):
-    # Validate uploaded file
-    await validate_uploaded_file(image)
-
-    try:
-        image_bytes = await image.read()
-    except Exception as e:
-        logger.error(f"Invalid image file: {e}", exc_info=True)
-        raise HTTPException(status_code=400, detail="Invalid image file")
+    # Optimized Image Processing: Validation + Optimization
+    _, image_bytes = await process_uploaded_image(image)
 
     try:
         return {"detections": await _cached_detect_graffiti(image_bytes)}

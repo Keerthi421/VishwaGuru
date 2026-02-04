@@ -33,6 +33,7 @@ def test_create_issue():
         # Also patch action plan generation to avoid external API calls
         # Note: Patch where it is imported/used (backend.routers.issues and backend.tasks)
         with patch("backend.routers.issues.validate_uploaded_file", new_callable=AsyncMock) as mock_validate, \
+                 patch("backend.routers.issues.process_uploaded_image", new_callable=AsyncMock) as mock_opt, \
              patch("backend.tasks.generate_action_plan", new_callable=AsyncMock) as mock_plan:
 
             mock_plan.return_value = {

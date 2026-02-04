@@ -19,7 +19,7 @@ from backend.schemas import (
 )
 from backend.utils import (
     check_upload_limits, validate_uploaded_file, save_file_blocking, save_issue_db,
-    UPLOAD_LIMIT_PER_USER, UPLOAD_LIMIT_PER_IP
+    process_uploaded_image, UPLOAD_LIMIT_PER_USER, UPLOAD_LIMIT_PER_IP
 )
 from backend.tasks import (
     process_action_plan_background, create_grievance_from_issue_background,
@@ -60,17 +60,15 @@ async def create_issue(
         check_upload_limits(identifier, limit)
 
     try:
-        # Validate uploaded image if provided
-        if image:
-            await validate_uploaded_file(image)
-
-        # Save image if provided
+        # Optimized Image Processing: Combined validation, resizing, and saving
         if image:
             upload_dir = "data/uploads"
             os.makedirs(upload_dir, exist_ok=True)
             filename = f"{uuid.uuid4()}_{image.filename}"
             image_path = os.path.join(upload_dir, filename)
-            await run_in_threadpool(save_file_blocking, image.file, image_path)
+
+            # Unified pass: Validate + Resize + Strip EXIF + Save
+            await process_uploaded_image(image, save_path=image_path)
     except HTTPException:
         # Re-raise HTTP exceptions (from validation)
         raise
@@ -327,8 +325,8 @@ async def verify_issue_endpoint(
 
     if image:
         # AI Verification Logic
-        # Validate uploaded file
-        await validate_uploaded_file(image)
+        # Optimized Image Processing: Validation + Optimization in one pass
+        await process_uploaded_image(image)
 
         try:
             image_bytes = await image.read()
