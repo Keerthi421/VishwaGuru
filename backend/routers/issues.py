@@ -60,9 +60,10 @@ async def create_issue(
         check_upload_limits(identifier, limit)
 
     try:
+        pil_image = None
         # Validate uploaded image if provided
         if image:
-            await validate_uploaded_file(image)
+            pil_image = await validate_uploaded_file(image)
 
         # Save image if provided
         if image:
@@ -70,7 +71,8 @@ async def create_issue(
             os.makedirs(upload_dir, exist_ok=True)
             filename = f"{uuid.uuid4()}_{image.filename}"
             image_path = os.path.join(upload_dir, filename)
-            await run_in_threadpool(save_file_blocking, image.file, image_path)
+            # Pass pil_image to save_file_blocking to avoid reopening
+            await run_in_threadpool(save_file_blocking, image.file, image_path, pil_image)
     except HTTPException:
         # Re-raise HTTP exceptions (from validation)
         raise
@@ -329,6 +331,7 @@ async def verify_issue_endpoint(
         # AI Verification Logic
         # Validate uploaded file
         await validate_uploaded_file(image)
+        # We can ignore the returned PIL image here as we need bytes for the external API
 
         try:
             image_bytes = await image.read()
