@@ -1,9 +1,21 @@
+import os
+import sys
+from pathlib import Path
+
+# Add project root to sys.path to ensure 'backend.*' imports work
+# This handles cases where PYTHONPATH is set to 'backend' (e.g. on Render)
+current_file = Path(__file__).resolve()
+backend_dir = current_file.parent
+repo_root = backend_dir.parent
+
+if str(repo_root) not in sys.path:
+    sys.path.insert(0, str(repo_root))
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.concurrency import run_in_threadpool
 from contextlib import asynccontextmanager
-import os
 import httpx
 import logging
 import asyncio
