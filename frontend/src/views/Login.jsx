@@ -24,7 +24,11 @@ function Login({ initialIsLogin = true }) {
         try {
             if (isLogin) {
                 const user = await login(email, password);
-                if (user && user.role === 'admin') {
+                if (!user) {
+                    setError('Authentication failed. Please check your credentials.');
+                    return;
+                }
+                if (user.role === 'admin') {
                     navigate('/admin/dashboard', { replace: true });
                 } else {
                     navigate(from, { replace: true });
@@ -32,7 +36,11 @@ function Login({ initialIsLogin = true }) {
             } else {
                 await signup({ email, password, full_name: fullName });
                 const user = await login(email, password);
-                if (user && user.role === 'admin') {
+                if (!user) {
+                    setError('Signup successful, but auto-login failed. Please sign in manually.');
+                    return;
+                }
+                if (user.role === 'admin') {
                     navigate('/admin/dashboard', { replace: true });
                 } else {
                     navigate(from, { replace: true });

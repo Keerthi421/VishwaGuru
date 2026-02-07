@@ -13,8 +13,13 @@ const getHeaders = (headers = {}) => {
 
 export const apiClient = {
   setToken: (token) => {
-    authToken = token;
-    localStorage.setItem('token', token);
+    if (!token) {
+      authToken = null;
+      localStorage.removeItem('token');
+    } else {
+      authToken = token;
+      localStorage.setItem('token', token);
+    }
   },
   removeToken: () => {
     authToken = null;

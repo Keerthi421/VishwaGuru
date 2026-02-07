@@ -44,8 +44,19 @@ if __name__ == "__main__":
         print("Usage: python init_admin.py <email> <password> [full_name]")
         sys.exit(1)
     
+    import getpass
+
     email = sys.argv[1]
-    password = sys.argv[2]
-    full_name = sys.argv[3] if len(sys.argv) > 3 else "Admin User"
+    password = os.getenv("ADMIN_PASSWORD")
+    if not password:
+        if len(sys.argv) > 2:
+            print("Warning: Passing password via command line argument is insecure.")
+            password = sys.argv[2]
+            full_name = sys.argv[3] if len(sys.argv) > 3 else "Admin User"
+        else:
+            password = getpass.getpass("Enter admin password: ")
+            full_name = input("Enter full name (default: Admin User): ") or "Admin User"
+    else:
+        full_name = sys.argv[2] if len(sys.argv) > 2 else "Admin User"
     
     create_admin_user(email, password, full_name)
